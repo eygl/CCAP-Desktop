@@ -54,6 +54,7 @@ import os.path
 import time
 from time import sleep
 import datetime
+import calendar
 import xml.etree.ElementTree as ET
 import xml.etree.cElementTree as ET
 import Reports
@@ -61,6 +62,10 @@ import CapIO
 import ComSubs
 import configparser
 import glob
+import qrcode
+import json
+from PIL import Image, ImageDraw, ImageFont
+
 
 MAX_STRING_LENGTH = 20
 MAX_BATTERY_LIFE = 365
@@ -162,6 +167,8 @@ def CalcFormHeight():
     return FormHeight
 
 
+
+
 class WriteWindow(wx.Frame):
     CapErased = False
 
@@ -217,7 +224,7 @@ class WriteWindow(wx.Frame):
         self.WriteDoseCountText = wx.StaticText(panel, -1, u'Dose Count', pos=(15, 125), size=(120, 30))
         self.WriteDoseCountText.SetFont(font16)
 
-        self.WriteDoseCount = wx.SpinCtrl(panel, -1, pos=(150, 125), size=(175, 25), initial=30, value='30', min=1,
+        self.WriteDoseCount = wx.SpinCtrl(panel, -1, pos=(152, 125), size=(175, 25), initial=30, value='30', min=1,
                                           max=120)
         self.WriteDoseCount.SetFont(font12)
         self.Bind(wx.EVT_SPINCTRL, self.on_DoseChange, self.WriteDoseCount)
@@ -269,7 +276,7 @@ class WriteWindow(wx.Frame):
                                            choices=[u'AM', u'PM'], style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.WriteAMPMChoice.SetFont(font12)
 
-        self.WriteBuzzerEnableCheckBox = wx.CheckBox(panel, -1, 'Enable Buzzer', (150, 275), size=(150, 30))
+        self.WriteBuzzerEnableCheckBox = wx.CheckBox(panel, -1, 'Enable Buzzer', (150, 280), size=(150, 30))
         self.WriteBuzzerEnableCheckBox.SetFont(font12)
 
         self.WriteNewBatteryButton = wx.Button(panel, -1, label='New Battery', pos=(300, 300), size=(150, 50))
@@ -288,9 +295,9 @@ class WriteWindow(wx.Frame):
         self.WriteEraseButton.SetFont(font16)
         self.Bind(wx.EVT_BUTTON, self.on_WriteEraseButton, self.WriteEraseButton)
 
-        self.WriteOffButton = wx.Button(panel, -1, label='Powerdown', pos=(300, 350), size=(150, 50))
-        self.WriteOffButton.SetFont(font16)
-        self.Bind(wx.EVT_BUTTON, self.on_WriteOffButton, self.WriteOffButton)
+        self.WriteQRCodeButton = wx.Button(panel, -1, label='QR Code', pos=(300, 350), size=(150, 50))
+        self.WriteQRCodeButton.SetFont(font16)
+        self.Bind(wx.EVT_BUTTON, self.on_WriteQRCodeButton, self.WriteQRCodeButton)
 
         self.WriteBackButton = wx.Button(panel, -1, label='Back', pos=(450, 350), size=(150, 50))
         self.WriteBackButton.SetFont(font16)
@@ -374,6 +381,7 @@ class WriteWindow(wx.Frame):
         global GlobalSerialPort
         global GlobalDBLocation
         MaxBatteryLife = 365
+
         if GlobalSerialPort == CapIO.NO_COM_PORT_TEXT:
             dlg = wx.MessageDialog(None, 'No Com Port', 'Error', wx.OK)
             DialogReturn = dlg.ShowModal()
@@ -439,10 +447,13 @@ class WriteWindow(wx.Frame):
                         if StartHours == 24:
                             StartHours = 12
                     CapIO.WriteString(GlobalSerialPort, 'F:00:{:0>2}:{:0>2}:{:0>2}:{:0>2}:{:0>2}:{:0>2}\r'.format(
-                        self.WriteStartMins.GetValue(), StartHours, StartTime.day, 'Wednesday',
-                        StartTime.month + 1, StartTime.year - 2000))
+                        self.WriteStartMins.GetValue(), StartHours, StartTime.day, StartTime.weekday(),
+                        StartTime.month, StartTime.year - 2000))
                     CapIO.WriteSettings(GlobalSerialPort, WriteDict)
                     CapIO.WriteString(GlobalSerialPort, 'J\r')  # start
+
+                    
+
 
                     Timer = 10
                     while Timer:
@@ -455,6 +466,9 @@ class WriteWindow(wx.Frame):
                         if len(PillCapTitleList) >= 3:
                             if PillCapTitleList[3] != '0' and PillCapTitleList[3] != '8':
                                 CapIO.WriteString(GlobalSerialPort, 'Q\r')  # clear timer
+
+                                
+                                self.on_GenerateQRCode()
                                 dlg = wx.MessageDialog(None, 'Cap Programmed.', 'Success', wx.OK)
                                 DialogReturn = dlg.ShowModal()
                                 break
@@ -492,14 +506,84 @@ class WriteWindow(wx.Frame):
                                        wx.OK)
                 DialogReturn = dlg.ShowModal()
 
-    def on_WriteOffButton(self, event):
+    def on_GenerateQRCode(self):
+        StartTime = datetime.datetime.now().isoformat()
+
+        self.rx = [{
+            "treatment": self.WriteTreatmentChoice.GetValue(),
+            "dosecount": str(self.WriteDoseCount.GetValue()),
+            "dosefreq": DosePatternsRev[self.WriteDoseChoice.GetValue()],
+            "startdate": StartTime,
+            "patient" : self.WritePatientChoice.GetValue(),
+            "client" : self.WriteClientChoice.GetValue(),
+            "doctor" : self.WriteDrChoice.GetValue(),
+            "facility" : self.WriteFacilityTextCtrl.GetValue(),
+            "route" : "mouth",
+            "medication" : self.WriteTreatmentChoice.GetValue(),
+            "id": "123",
+            "note":"NOTES NEED IMPLEMENTING",
+            "active":True,
+        }]
+
+        obj = json.dumps(self.rx)
+        qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=6,
+                border=4,
+        )
+        qr.add_data(obj)
+        qr.make(fit=True)
+        qr_img = qr.make_image(fill='black', back_color='white')
+        
+        width, height = qr_img.size
+        margin = 130
+        imageCanvas = Image.new('RGB', (width, height + margin),(255, 255, 255))
+        imageCanvas.paste(qr_img)
+
+        draw = ImageDraw.Draw(imageCanvas)             
+        boldFont = ImageFont.truetype('Roboto-Bold.ttf',size=18)
+        regularFont = ImageFont.truetype('Roboto-Regular.ttf',size=14)
+        color = 'rgb(0, 0, 0)' 
+
+        now = datetime.datetime.now()
+        nowString =  now.strftime("%m/%d/%Y, %I:%M %p")
+
+        
+            
+        draw.text((20,height - 20),self.rx[0]['facility'],fill=color,font=boldFont,align='center')
+        
+        headlinerText = "Date: " + nowString + "   |   Doctor: " + self.rx[0]['doctor']
+        draw.text((20,height), headlinerText,fill=color,font=regularFont,align='center')
+        
+        
+        draw.text((20,height + 24), "Patient: ", fill=color, font=regularFont, align='left')
+        draw.text((70,height + 20), self.rx[0]['patient'], fill=color, font=boldFont, align='left')
+        treatmentString = "Give " + self.rx[0]['treatment'] + " by " + self.rx[0]['route'] + " " + self.rx[0]['dosefreq'].lower()
+
+        draw.text((20,height + 40), treatmentString.upper(), fill=color,font=regularFont,align='left')
+        draw.text((20,height + 60), self.rx[0]['medication'], fill=color, font=boldFont,align='left') 
+        draw.text((20,height + 80), "QTY: " + self.rx[0]['dosecount'], fill=color, font= regularFont, align='left')
+
+        global QRCodeWidth
+        global QRCodeHeight
+        global QRCodeFileName
+        QRCodeWidth = width
+        QRCodeHeight = height + margin
+        QRCodeFileName = "qrcode.png"
+        ##ADD TEXT HERE
+        imageCanvas.save(QRCodeFileName)
+
+        QRCodeDisplay = QRCodeWindow()
+
+    def on_WriteQRCodeButton(self, event):
         global GlobalSerialPort
         if GlobalSerialPort == CapIO.NO_COM_PORT_TEXT:
             dlg = wx.MessageDialog(None, 'No Com Port', 'Error', wx.OK)
             DialogReturn = dlg.ShowModal()
         else:
             self.StatusBar.SetStatusText('Powering Cap Down', 3)
-            CapIO.WriteString(GlobalSerialPort, 'y/r')
+            CapIO.WriteString(GlobalSerialPort, 'y/r')     
 
     def on_WriteDemoButton(self, event):
         global GlobalSerialPort
@@ -511,10 +595,10 @@ class WriteWindow(wx.Frame):
             CapIO.WriteString(GlobalSerialPort, 'AR/r')
 
     def on_WriteBackButton(self, event):
-        SettingsDict = {}
-        SettingsDict['lasttreatment'] = self.WriteTreatmentChoice.GetValue()
-        SettingsDict['lastdoctor'] = self.WriteDrChoice.GetValue()
-        SaveConfigFile(SettingsDict)
+        # SettingsDict = {}
+        # SettingsDict['lasttreatment'] = self.WriteTreatmentChoice.GetValue()
+        # SettingsDict['lastdoctor'] = self.WriteDrChoice.GetValue()
+        # SaveConfigFile(SettingsDict)
         self.WriteDoseCount.SetValue(30)
         # self.Calendar.SetRange(wx.DateTime_Now() - wx.DateSpan(days=1), wx.DateTime_Now() + wx.DateSpan(days=90))
         now = datetime.datetime.now()
@@ -534,6 +618,18 @@ class WriteWindow(wx.Frame):
         self.Hide()
         frame.Show()
 
+class QRCodeWindow(wx.Frame):
+    def __init__(self, parent=None):
+        global QRCodeFileName
+        global QRCodeWidth
+        global QRCodeHeight
+        wx.Frame.__init__(self, parent, title='QRCode', size=(QRCodeWidth, QRCodeHeight+50),
+                          style=wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.MAXIMIZE_BOX))
+        png = wx.Image(QRCodeFileName, wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+        panel = wx.Panel(self, -1)
+        wx.StaticBitmap(panel, -1, png, (0,0), (QRCodeWidth,QRCodeHeight))
+        
+        self.Show()
 
 class ReportsWindow(wx.Frame):
     FacilityText = ''
@@ -717,9 +813,9 @@ class ReportsWindow(wx.Frame):
         # Reports.GenerateReport(self.ReportDestination.GetValue(), self.ReportFormatChoice.GetValue(), InfoDict, Date.text)
 
     def on_ReportsBackButton(self, event):
-        SettingsDict = {}
-        SettingsDict['reportformat'] = self.ReportFormatChoice.GetValue()
-        SaveConfigFile(SettingsDict)
+        # SettingsDict = {}
+        # SettingsDict['reportformat'] = self.ReportFormatChoice.GetValue()
+        # SaveConfigFile(SettingsDict)
         self.ReportClientChoice.SetValue('')
         self.ReportPatientChoice.SetValue('')
         self.ReportDateChoice.SetValue('')
@@ -1112,12 +1208,12 @@ class SettingsWindow(wx.Frame):
         DirDialog.Destroy()
 
     def on_SettingsBackButton(self, event):
-        SettingsDict = {}
-        SettingsDict['Facility'] = self.SettingsFacilityTextCtrl.Value
-        SettingsDict['Treatments'] = self.SettingsMedList.GetValue()
-        SettingsDict['Doctors'] = self.SettingsDrList.GetValue()
-        SettingsDict['DatabaseLocation'] = self.SettingsDatabaseLocation.GetValue()
-        SaveConfigFile(SettingsDict)
+        # SettingsDict = {}
+        # SettingsDict['Facility'] = self.SettingsFacilityTextCtrl.Value
+        # SettingsDict['Treatments'] = self.SettingsMedList.GetValue()
+        # SettingsDict['Doctors'] = self.SettingsDrList.GetValue()
+        # SettingsDict['DatabaseLocation'] = self.SettingsDatabaseLocation.GetValue()
+        # SaveConfigFile(SettingsDict)
         self.SettingsCommandTextCtrl.SetValue('')
         self.Hide()
         frame.Show()
@@ -1247,7 +1343,7 @@ class MainWindow(wx.Frame):
                 BaseStationTitle = 'Base Station Error'
                 self.Update_Statusbar(BaseStationTitle, 1)
             else:
-                BaseStationTitle = BaseStationList[1][2:].strip()
+                BaseStationTitle = BaseStationList[1][2:-5].strip()
                 BaseStationTitle = BaseStationTitle.replace(':', ' ')
                 self.Update_Statusbar(str(BaseStationTitle), 1)
         self.OnTimer(wx.EVT_TIMER)
@@ -1474,8 +1570,8 @@ class MainWindow(wx.Frame):
                     BaseStationTitle = 'Base Station Error'
                     self.Update_Statusbar(BaseStationTitle, 1)
                 else:
-                    # BaseStationTitle = BaseStationList[1][2:].strip()
-                    # BaseStationTitle = BaseStationTitle.replace(':', ' ')
+                    BaseStationTitle = BaseStationList[1][2:-5].strip()
+                    BaseStationTitle = BaseStationTitle.replace(':', ' ')
                     self.Update_Statusbar(BaseStationTitle, 1)
         else:
             try:

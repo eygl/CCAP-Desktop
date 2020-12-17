@@ -1,6 +1,5 @@
 import serial
 import datetime
-import ComSubs
 from time import sleep
 
 EEPROM_WRITE_TIME = .0034 * 20
@@ -53,8 +52,8 @@ def ReadTime(SPort, TimeSelect):
         # print ResponseString
         print("Raw DT: " + str(ResponseString)[7:-1])
         StartDT = datetime.datetime.strptime(str(ResponseString)[7:-1], "%S:%M:%H:%d:0%w:%m:%y")
-        print("Parsed Date: " + StartDT)
         ReturnString = StartDT.strftime("%Y-%m-%d %H:%M:%S")
+        print("Parsed Date: " + ReturnString)
     except ValueError:
         ReturnString = 'Read Error'
     except KeyError:
@@ -130,7 +129,7 @@ def ReadData(SPort):
 
 
 def WriteString(SPort, OutputString):
-    print("Writing String...")
+    print("Writing String: " + OutputString)
     COMPort = serial.Serial(SPort, CAP_BAUD_RATE, timeout=DEFAULT_SERIAL_TIMEOUT)
     OutputChars = list(OutputString)
     # print OutputChars
@@ -143,11 +142,11 @@ def WriteString(SPort, OutputString):
 
 
 def WriteSettings(SPort, WriteDict):
-    print("Writing Settings...")
     Ping(SPort)
     for Description, Settings in SettingsDict.items():
         OutputString = WriteDict[Description]
         OutputString = OutputString[:20]  # limit strings to 20 characters
+        print("Writing Setting: " + OutputString)
         WriteString(SPort, 'S' + SettingsDict[Description] + OutputString + '\r')
         sleep(EEPROM_WRITE_TIME)
 
@@ -213,5 +212,5 @@ def FindBaseStation():
             finally:
                 pass
     ReturnList.append(str(PortName))
-    ReturnList.append(str(ResponseString)[3:-5])
+    ReturnList.append(str(ResponseString))
     return ReturnList

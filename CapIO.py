@@ -146,7 +146,7 @@ def WriteSettings(SPort, WriteDict):
     for Description, Settings in SettingsDict.items():
         OutputString = WriteDict[Description]
         OutputString = OutputString[:20]  # limit strings to 20 characters
-        print("Writing Setting: " + OutputString)
+        #print("Writing Setting: " + OutputString)
         WriteString(SPort, 'S' + SettingsDict[Description] + OutputString + '\r')
         sleep(EEPROM_WRITE_TIME)
 

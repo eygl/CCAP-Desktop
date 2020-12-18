@@ -47,21 +47,20 @@ Version Date			Changes
 SWVer = '0.60'
 
 import wx
+import wx.adv # Calendar
 import sys
-#import wx.calendar
 import platform
 import os.path
 import time
 from time import sleep
 import datetime
-import calendar
 import xml.etree.ElementTree as ET
 import xml.etree.cElementTree as ET
 import Reports
 import CapIO
-import ComSubs
 import configparser
 import glob
+
 import qrcode
 import json
 from PIL import Image, ImageDraw, ImageFont
@@ -73,6 +72,9 @@ MAX_BATTERY_LIFE = 365
 GlobalSerialPort = ''
 GlobalDBLocation = ''
 
+
+DosePatternsText = {'2/day': 'twice a day', '1/day': 'once a Day', '1/2 days': 'every other day', '1/3 days': 'once every three days', '1/week': 'once a week', '1/month': 'once a month',
+                   '1/3 months': 'ibce every 3 months'}
 DosePatterns = {'12': '2/day', '24': '1/day', '48': '1/2 days', '72': '1/3 days', '168': '1/week', '720': '1/month',
                 '2160': '1/3 months'}
 DosePatternsRev = {'2/day': '12', '1/day': '24', '1/2 days': '48', '1/3 days': '72', '1/week': '168', '1/month': '720',
@@ -173,7 +175,7 @@ class WriteWindow(wx.Frame):
     CapErased = False
 
     def __init__(self, parent):
-        wx.Frame.__init__(self, parent, title='Write Cap', size=(CalcFormLength(), CalcFormHeight()),
+        wx.Frame.__init__(self, parent, title='Write Cap', size=(CalcFormLength(), CalcFormHeight() +150),
                           style=wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.CLOSE_BOX | wx.MAXIMIZE_BOX))
 
         wx.Frame.CenterOnScreen(self)
@@ -248,15 +250,25 @@ class WriteWindow(wx.Frame):
         # self.WritePatientTextCtrl.SetMaxLength(MAX_STRING_LENGTH)
         #		self.Bind(wx.EVT_TEXT, self.on_PatientTextChange, self.WritePatientChoice)
 
-        self.WriteClientText = wx.StaticText(panel, -1, u'Start Date', pos=(15, 200), size=(120, 30))
-        self.WriteClientText.SetFont(font16)
+        self.WriteRouteText = wx.StaticText(panel, -1, u'Route', pos=(15, 200), size=(120, 30))
+        self.WriteRouteText.SetFont(font16)
 
-        #self.Calendar = wx.DatePickerCtrl(panel, -1, pos=(150, 200))
-        #self.Calendar.SetRange(wx.DateTime_Now(), wx.DateTime_Now() + wx.DateSpan(days=90))
+        self.WriteRouteChoice = wx.ComboBox(panel, -1, '1/day', pos=(150, 200), size=(175, 25),
+                                           choices=[u'Mouth',u'Mouth with food'], style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.WriteRouteChoice.SetFont(font12)
+        self.Bind(wx.EVT_COMBOBOX, self.on_RouteChange, self.WriteRouteChoice)
 
-        self.WriteStartTimeText = wx.StaticText(panel, -1, u'Start Time', pos=(15, 250), size=(120, 30))
+
+        self.WriteStartDateText = wx.StaticText(panel, -1, u'Start Date', pos=(15, 240), size=(120, 30))
+        self.WriteStartDateText.SetFont(font16)
+
+        self.Calendar = wx.adv.CalendarCtrl(panel, 10, wx.DateTime.Now(),pos=(150,240))
+        self.Calendar.SetDateRange(lowerdate=wx.DateTime.Now())
+        self.Calendar.Bind(wx.adv.EVT_CALENDAR_SEL_CHANGED, self.OnDate)
+
+        self.WriteStartTimeText = wx.StaticText(panel, -1, u'Start Time', pos=(15, 250+150), size=(120, 30))
         self.WriteStartTimeText.SetFont(font16)
-        self.WriteColonText = wx.StaticText(panel, -1, u':', pos=(200, 250), size=(15, 30))
+        self.WriteColonText = wx.StaticText(panel, -1, u':', pos=(200, 250+150), size=(15, 30))
         self.WriteColonText.SetFont(font16)
 
         now = datetime.datetime.now()
@@ -266,42 +278,50 @@ class WriteWindow(wx.Frame):
         else:
             InitHour = now.hour - 11
             AMOrPM = u'PM'
-        self.WriteStartHours = wx.SpinCtrl(panel, -1, pos=(150, 250), size=(50, 25), initial=InitHour,
+        self.WriteStartHours = wx.SpinCtrl(panel, -1, pos=(150, 250+150), size=(50, 25), initial=InitHour,
                                            value=str(InitHour), min=1, max=12)
         self.WriteStartHours.SetFont(font12)
-        self.WriteStartMins = wx.SpinCtrl(panel, -1, pos=(210, 250), size=(50, 25), initial=0, value='0', min=0, max=59)
+        self.WriteStartMins = wx.SpinCtrl(panel, -1, pos=(215, 250+150), size=(50, 25), initial=0, value='0', min=0, max=59)
         self.WriteStartMins.SetFont(font12)
 
-        self.WriteAMPMChoice = wx.ComboBox(panel, -1, AMOrPM, pos=(270, 250), size=(60, 25),
+        self.WriteAMPMChoice = wx.ComboBox(panel, -1, AMOrPM, pos=(270, 250+150), size=(60, 25),
                                            choices=[u'AM', u'PM'], style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.WriteAMPMChoice.SetFont(font12)
 
-        self.WriteBuzzerEnableCheckBox = wx.CheckBox(panel, -1, 'Enable Buzzer', (150, 280), size=(150, 30))
+        self.WriteBuzzerEnableCheckBox = wx.CheckBox(panel, -1, 'Enable Buzzer', (150, 280+150), size=(150, 30))
         self.WriteBuzzerEnableCheckBox.SetFont(font12)
 
-        self.WriteNewBatteryButton = wx.Button(panel, -1, label='New Battery', pos=(300, 300), size=(150, 50))
+        self.WriteNewBatteryButton = wx.Button(panel, -1, label='New Battery', pos=(300, 300+150), size=(150, 50))
         self.WriteNewBatteryButton.SetFont(font16)
         self.Bind(wx.EVT_BUTTON, self.on_WriteNewBatteryButton, self.WriteNewBatteryButton)
 
-        self.WriteDemoButton = wx.Button(panel, -1, label='Demo Mode', pos=(450, 300), size=(150, 50))
+        self.WriteDemoButton = wx.Button(panel, -1, label='Demo Mode', pos=(450, 300+150), size=(150, 50))
         self.WriteDemoButton.SetFont(font16)
         self.Bind(wx.EVT_BUTTON, self.on_WriteDemoButton, self.WriteDemoButton)
 
-        self.WriteWriteButton = wx.Button(panel, -1, label='Write', pos=(0, 350), size=(150, 50))
+        self.WriteWriteButton = wx.Button(panel, -1, label='Write', pos=(0, 350+150), size=(150, 50))
         self.WriteWriteButton.SetFont(font16)
         self.Bind(wx.EVT_BUTTON, self.on_WriteWriteButton, self.WriteWriteButton)
 
-        self.WriteEraseButton = wx.Button(panel, -1, label='Erase', pos=(150, 350), size=(150, 50))
+        self.WriteEraseButton = wx.Button(panel, -1, label='Erase', pos=(150, 350+150), size=(150, 50))
         self.WriteEraseButton.SetFont(font16)
         self.Bind(wx.EVT_BUTTON, self.on_WriteEraseButton, self.WriteEraseButton)
 
-        self.WriteQRCodeButton = wx.Button(panel, -1, label='QR Code', pos=(300, 350), size=(150, 50))
+        self.WriteQRCodeButton = wx.Button(panel, -1, label='QR Code', pos=(300, 350+150), size=(150, 50))
         self.WriteQRCodeButton.SetFont(font16)
         self.Bind(wx.EVT_BUTTON, self.on_WriteQRCodeButton, self.WriteQRCodeButton)
 
-        self.WriteBackButton = wx.Button(panel, -1, label='Back', pos=(450, 350), size=(150, 50))
+        self.WriteBackButton = wx.Button(panel, -1, label='Back', pos=(450, 350+150), size=(150, 50))
         self.WriteBackButton.SetFont(font16)
         self.Bind(wx.EVT_BUTTON, self.on_WriteBackButton, self.WriteBackButton)
+
+    def on_RouteChange(self,event):
+        if self.WriteRouteChoice.GetStringSelection() == 'Mouth':
+            print(self.WriteRouteChoice.GetStringSelection())
+
+    def OnDate(self,event):
+        print(self.Calendar.GetDate())
+        print(type(self.Calendar.GetDate()))
 
     def on_PatientTextChange(self, event):
         if platform.system() != "Windows":
@@ -357,7 +377,6 @@ class WriteWindow(wx.Frame):
                 self.WriteBuzzerEnableCheckBox.SetValue(True)
         else:
             self.WritePatientChoice.Clear()
-            self.WritePatientChoice.Append('')
             self.WritePatientChoice.SetSelection(0)
             self.WriteBuzzerEnableCheckBox.SetValue(True)
 
@@ -435,9 +454,8 @@ class WriteWindow(wx.Frame):
                                                                                                     now.year - 2000))
                     # Get Value from Calendar
                     #TODO
-                    #StartTime = self.Calendar.GetValue()
-                    #StartTime = 0
-                    StartTime = datetime.datetime.now()
+                    StartTime = self.Calendar.GetDate()
+                    
                     if self.WriteAMPMChoice.GetValue() == 'AM':
                         StartHours = self.WriteStartHours.GetValue()
                         if StartHours == 12:
@@ -447,8 +465,8 @@ class WriteWindow(wx.Frame):
                         if StartHours == 24:
                             StartHours = 12
                     CapIO.WriteString(GlobalSerialPort, 'F:00:{:0>2}:{:0>2}:{:0>2}:{:0>2}:{:0>2}:{:0>2}\r'.format(
-                        self.WriteStartMins.GetValue(), StartHours, StartTime.day, StartTime.weekday(),
-                        StartTime.month, StartTime.year - 2000))
+                        self.WriteStartMins.GetValue(), StartHours, StartTime.GetDay(), StartTime.GetWeekDay(),
+                        StartTime.GetMonth() + 1, StartTime.GetYear() - 2000))
                     CapIO.WriteSettings(GlobalSerialPort, WriteDict)
                     CapIO.WriteString(GlobalSerialPort, 'J\r')  # start
 
@@ -512,13 +530,13 @@ class WriteWindow(wx.Frame):
         self.rx = [{
             "treatment": self.WriteTreatmentChoice.GetValue(),
             "dosecount": str(self.WriteDoseCount.GetValue()),
-            "dosefreq": DosePatternsRev[self.WriteDoseChoice.GetValue()],
+            "dosefreq": DosePatternsText[self.WriteDoseChoice.GetValue()],
             "startdate": StartTime,
             "patient" : self.WritePatientChoice.GetValue(),
             "client" : self.WriteClientChoice.GetValue(),
             "doctor" : self.WriteDrChoice.GetValue(),
             "facility" : self.WriteFacilityTextCtrl.GetValue(),
-            "route" : "mouth",
+            "route" : self.WriteRouteChoice.GetValue(),
             "medication" : self.WriteTreatmentChoice.GetValue(),
             "id": "123",
             "note":"NOTES NEED IMPLEMENTING",
@@ -576,14 +594,8 @@ class WriteWindow(wx.Frame):
 
         QRCodeDisplay = QRCodeWindow()
 
-    def on_WriteQRCodeButton(self, event):
-        global GlobalSerialPort
-        if GlobalSerialPort == CapIO.NO_COM_PORT_TEXT:
-            dlg = wx.MessageDialog(None, 'No Com Port', 'Error', wx.OK)
-            DialogReturn = dlg.ShowModal()
-        else:
-            self.StatusBar.SetStatusText('Powering Cap Down', 3)
-            CapIO.WriteString(GlobalSerialPort, 'y/r')     
+    def on_WriteQRCodeButton(self, event):  
+        self.on_GenerateQRCode()
 
     def on_WriteDemoButton(self, event):
         global GlobalSerialPort
@@ -1273,13 +1285,6 @@ class MainWindow(wx.Frame):
         self.WritePageGotoButton.SetFont(font16)
         self.Bind(wx.EVT_BUTTON, self.on_WritePageGotoButton, self.WritePageGotoButton)
 
-        self.AddPatientPageGotoButton = wx.Button(panel, -1, label='Add Client/Patient', pos=(150, 300), size=(150, 50))
-        self.AddPatientPageGotoButton.SetFont(font12)
-        self.Bind(wx.EVT_BUTTON, self.on_AddPatientPageGotoButton, self.AddPatientPageGotoButton)
-
-        self.ReportPageGotoButton = wx.Button(panel, -1, label='Get Report', pos=(0, 300), size=(150, 50))
-        self.ReportPageGotoButton.SetFont(font16)
-        self.Bind(wx.EVT_BUTTON, self.on_ReportPageGotoButton, self.ReportPageGotoButton)
 
         self.SettingsPageGotoButton = wx.Button(panel, -1, label='Settings', pos=(300, 350), size=(150, 50))
         self.SettingsPageGotoButton.SetFont(font16)
@@ -1288,6 +1293,14 @@ class MainWindow(wx.Frame):
         self.ExitButton = wx.Button(panel, -1, label='Exit', pos=(450, 350), size=(150, 50))
         self.ExitButton.SetFont(font16)
         self.Bind(wx.EVT_BUTTON, self.on_ExitButton, self.ExitButton)
+
+        self.ReportPageGotoButton = wx.Button(panel, -1, label='Get Report', pos=(0, 300), size=(150, 50))
+        self.ReportPageGotoButton.SetFont(font16)
+        self.Bind(wx.EVT_BUTTON, self.on_ReportPageGotoButton, self.ReportPageGotoButton)
+        
+        self.AddPatientPageGotoButton = wx.Button(panel, -1, label='Add Client/Patient', pos=(150, 300), size=(150, 50))
+        self.AddPatientPageGotoButton.SetFont(font12)
+        self.Bind(wx.EVT_BUTTON, self.on_AddPatientPageGotoButton, self.AddPatientPageGotoButton)
         # end of GUI initialization
 
         # load settings
@@ -1345,6 +1358,7 @@ class MainWindow(wx.Frame):
             else:
                 BaseStationTitle = BaseStationList[1][2:-5].strip()
                 BaseStationTitle = BaseStationTitle.replace(':', ' ')
+                BaseStationTitle = BaseStationTitle.replace('Z\\r', '')
                 self.Update_Statusbar(str(BaseStationTitle), 1)
         self.OnTimer(wx.EVT_TIMER)
 
@@ -1354,20 +1368,19 @@ class MainWindow(wx.Frame):
         # Fill Doctor list
         TempString = self.SettingsPanel.SettingsDrList.GetValue().strip()
         TempList = TempString.split('\n')
-        self.WritePanel.WriteDrChoice.Append('')
+        self.WritePanel.WriteDrChoice.Clear()
         for Items in TempList:
             self.WritePanel.WriteDrChoice.Append(Items)
         # self.WritePanel.WriteDrChoice.SetSelection(0)
         # Fill Medicine list
         TempString = self.SettingsPanel.SettingsMedList.GetValue().strip()
         TempList = TempString.split('\n')
-        self.WritePanel.WriteTreatmentChoice.Append('')
+        self.WritePanel.WriteTreatmentChoice.Clear()
         for Items in TempList:
             self.WritePanel.WriteTreatmentChoice.Append(Items)
         # self.WritePanel.WriteTreatmentChoice.SetSelection(0)
         # Fill Client list
         self.WritePanel.WriteClientChoice.Clear()
-        self.WritePanel.WriteClientChoice.Append('')
         ClientDB = ET.parse(os.path.join(GlobalDBLocation, 'PatientDB.XML'))
         ClientList = []
         for Clients in ClientDB.getroot():
@@ -1377,7 +1390,6 @@ class MainWindow(wx.Frame):
         self.WritePanel.WriteClientChoice.SetSelection(0)
         # Clear Patient list
         self.WritePanel.WritePatientChoice.Clear()
-        self.WritePanel.WritePatientChoice.Append('')
         self.WritePanel.WritePatientChoice.SetSelection(0)
         self.WritePanel.WriteBuzzerEnableCheckBox.SetValue(True)
 
@@ -1572,6 +1584,7 @@ class MainWindow(wx.Frame):
                 else:
                     BaseStationTitle = BaseStationList[1][2:-5].strip()
                     BaseStationTitle = BaseStationTitle.replace(':', ' ')
+                    BaseStationTitle = BaseStationTitle.replace('Z\r', '')
                     self.Update_Statusbar(BaseStationTitle, 1)
         else:
             try:

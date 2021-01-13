@@ -27,12 +27,12 @@ def RxdStrParse(RecievedString):
     return ReturnList
 
 def Ping(SPort):
-    print("Pinging for cap on: " + SPort)    
+    #print("Pinging for cap on: " + SPort)    
     COMPort = serial.Serial(SPort, CAP_BAUD_RATE, timeout=DEFAULT_SERIAL_TIMEOUT)
     COMPort.write(str.encode('T\r'))
 
     ResponseList = RxdStrParse(str(COMPort.readline()))
-    print("Response: " + str(ResponseList))
+    #print("Response: " + str(ResponseList))
 
 
     COMPort.close()
@@ -108,6 +108,45 @@ def ReadSettings(SPort):
     COMPort.close()
     return ReturnDict
 
+def DumpRAM(SPort):
+    print("Reading RAM...")
+    ReturnStringList = []
+    COMPort = serial.Serial(SPort, CAP_BAUD_RATE, timeout=DEFAULT_SERIAL_TIMEOUT)
+    COMPort.write(str.encode('T\r'))
+    COMPort.readline()
+    COMPort.write(str.encode('U\r'))
+
+    ResponseData = str(COMPort.readline().strip())
+    print("RAM: " + ResponseData)  
+
+    for i in range(0,40):
+        RAMData = str(COMPort.readline().strip())
+        if RAMData == b'':
+            break
+        print(RAMData[2:-1])
+        
+    COMPort.close()
+    return ReturnStringList
+
+def DumpEEPROM(SPort):
+    print("Reading EEPROM...")
+    ReturnStringList = []
+    COMPort = serial.Serial(SPort, CAP_BAUD_RATE, timeout=DEFAULT_SERIAL_TIMEOUT)
+    COMPort.write(str.encode('T\r'))
+    COMPort.readline()
+    COMPort.write(str.encode('V\r'))
+
+    ResponseData = str(COMPort.readline().strip())
+    print("EEPROM: " + ResponseData)  
+
+    for i in range(0,34):
+        EEPROMData = str(COMPort.readline().strip())
+        if EEPROMData == b'':
+            break
+        print(EEPROMData)
+        
+    COMPort.close()
+    return ReturnStringList
 
 def ReadData(SPort):
     print("Reading Data...")

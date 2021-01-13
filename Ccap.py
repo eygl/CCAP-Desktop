@@ -42,7 +42,13 @@ Version Date			Changes
 							Added more dose frequency options, modify output frequency units according to dose frequency selection
 							Added reporting dose length to report
 							Added buttons to reset battry timer, powerdown cap and enter demo mode
+Above Developed by Jeffery Soohoo
+Email as of 2021:
 
+0.61        01-13-21
+
+Aboved Developed by Erick Gonzalez
+Email as of 2021: erickygonzalez@gmail.com
 """
 SWVer = '0.60'
 
@@ -73,8 +79,8 @@ GlobalSerialPort = ''
 GlobalDBLocation = ''
 
 
-DosePatternsText = {'2/day': 'twice a day', '1/day': 'once a Day', '1/2 days': 'every other day', '1/3 days': 'once every three days', '1/week': 'once a week', '1/month': 'once a month',
-                   '1/3 months': 'ibce every 3 months'}
+DosePatternsText = {'2/day': 'twice a day', '1/day': 'once a day', '1/2 days': 'every other day', '1/3 days': 'once every three days', '1/week': 'once a week', '1/month': 'once a month',
+                   '1/3 months': 'once every 3 months'}
 DosePatterns = {'12': '2/day', '24': '1/day', '48': '1/2 days', '72': '1/3 days', '168': '1/week', '720': '1/month',
                 '2160': '1/3 months'}
 DosePatternsRev = {'2/day': '12', '1/day': '24', '1/2 days': '48', '1/3 days': '72', '1/week': '168', '1/month': '720',
@@ -263,7 +269,7 @@ class WriteWindow(wx.Frame):
         self.WriteStartDateText.SetFont(font16)
 
         self.Calendar = wx.adv.CalendarCtrl(panel, 10, wx.DateTime.Now(),pos=(150,240))
-        self.Calendar.SetDateRange(lowerdate=wx.DateTime.Now())
+        #self.Calendar.SetDateRange(lowerdate=wx.DateTime.Now())
         self.Calendar.Bind(wx.adv.EVT_CALENDAR_SEL_CHANGED, self.OnDate)
 
         self.WriteStartTimeText = wx.StaticText(panel, -1, u'Start Time', pos=(15, 250+150), size=(120, 30))
@@ -396,16 +402,32 @@ class WriteWindow(wx.Frame):
                 DosePatternsRev[self.WriteDoseChoice.GetValue()]) / 720
             self.WriteTreatmentLengthOutText.SetLabel(str(TreatmentLength) + ' Months')
 
+
+    def isWriteFormFilled(self):
+        if (self.WriteFacilityTextCtrl.GetValue() == '' or
+            self.WriteDrChoice.GetValue() == '' or
+            str(self.WriteDoseCount.GetValue()) == '' or
+            self.WriteClientChoice.GetValue() == '' or
+            self.WritePatientChoice.GetValue() == '' or
+            self.WriteRouteChoice.GetValue() == ''):
+            return False
+        else:
+            return True
+
     def on_WriteWriteButton(self, event):
         global GlobalSerialPort
         global GlobalDBLocation
         MaxBatteryLife = 365
 
+        
         if GlobalSerialPort == CapIO.NO_COM_PORT_TEXT:
             dlg = wx.MessageDialog(None, 'No Com Port', 'Error', wx.OK)
             DialogReturn = dlg.ShowModal()
         elif str(GlobalSerialPort).find(CapIO.NO_BASE_STATION_TEXT) == 0:
             dlg = wx.MessageDialog(None, 'No BaseStation', 'Error', wx.OK)
+            DialogReturn = dlg.ShowModal()
+        elif not self.isWriteFormFilled():
+            dlg = wx.MessageDialog(None, 'Some fields are missing information.', 'Error', wx.OK)
             DialogReturn = dlg.ShowModal()
         else:
             WriteDict = {}
@@ -536,14 +558,16 @@ class WriteWindow(wx.Frame):
             "client" : self.WriteClientChoice.GetValue(),
             "doctor" : self.WriteDrChoice.GetValue(),
             "facility" : self.WriteFacilityTextCtrl.GetValue(),
-            "route" : self.WriteRouteChoice.GetValue(),
+            "route" :  str(self.WriteRouteChoice.GetValue()).lower(),
             "medication" : self.WriteTreatmentChoice.GetValue(),
-            "id": "123",
-            "note":"NOTES NEED IMPLEMENTING",
+            "id": int(round(time.time() * 1000)),
+            "note":"N/A",
             "active":True,
         }]
 
+        
         obj = json.dumps(self.rx)
+        print(obj)
         qr = qrcode.QRCode(
                 version=1,
                 error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -555,7 +579,7 @@ class WriteWindow(wx.Frame):
         qr_img = qr.make_image(fill='black', back_color='white')
         
         width, height = qr_img.size
-        margin = 130
+        margin = 180
         imageCanvas = Image.new('RGB', (width, height + margin),(255, 255, 255))
         imageCanvas.paste(qr_img)
 
@@ -577,17 +601,40 @@ class WriteWindow(wx.Frame):
         
         draw.text((20,height + 24), "Patient: ", fill=color, font=regularFont, align='left')
         draw.text((70,height + 20), self.rx[0]['patient'], fill=color, font=boldFont, align='left')
+
+        draw.text((20,height + 40), "Client: ", fill=color, font=regularFont, align='left')
+        draw.text((60,height + 36), self.rx[0]['client'], fill=color, font=boldFont, align='left')
+
         treatmentString = "Give " + self.rx[0]['treatment'] + " by " + self.rx[0]['route'] + " " + self.rx[0]['dosefreq'].lower()
 
-        draw.text((20,height + 40), treatmentString.upper(), fill=color,font=regularFont,align='left')
-        draw.text((20,height + 60), self.rx[0]['medication'], fill=color, font=boldFont,align='left') 
-        draw.text((20,height + 80), "QTY: " + self.rx[0]['dosecount'], fill=color, font= regularFont, align='left')
+
+        #Intellegently add newline in between words and adjust bottom text
+        spaceIndexList = []
+        for char in range(len(treatmentString)):
+            if treatmentString[char] == ' ':
+                spaceIndexList.append(char)
+        offset = 0
+        maxCharWidth = 60
+        numberOfNewlines = 0
+        for i in range(len(spaceIndexList)):
+            if spaceIndexList[i] - offset > maxCharWidth :
+                treatmentString = treatmentString[:spaceIndexList[i-1]] + '\n' + treatmentString[spaceIndexList[i-1]+1:]
+                offset = spaceIndexList[i-1]
+                numberOfNewlines += 1
+
+                
+        draw.text((20,height + 60), treatmentString.upper(), fill=color,font=regularFont,align='left')
+        draw.text((20,height + 100 + 14 * numberOfNewlines), self.rx[0]['medication'], fill=color, font=boldFont,align='left') 
+        draw.text((20,height + 120 + 14 * numberOfNewlines), "QTY: " + self.rx[0]['dosecount'], fill=color, font= regularFont, align='left')
+
+
+
 
         global QRCodeWidth
         global QRCodeHeight
         global QRCodeFileName
-        QRCodeWidth = width
-        QRCodeHeight = height + margin
+        QRCodeWidth = width + 100
+        QRCodeHeight = height + margin + 100
         QRCodeFileName = "qrcode.png"
         ##ADD TEXT HERE
         imageCanvas.save(QRCodeFileName)
@@ -1284,8 +1331,19 @@ class MainWindow(wx.Frame):
         self.WritePageGotoButton = wx.Button(panel, -1, label='Write Cap', pos=(150, 350), size=(150, 50))
         self.WritePageGotoButton.SetFont(font16)
         self.Bind(wx.EVT_BUTTON, self.on_WritePageGotoButton, self.WritePageGotoButton)
+        
+        # ---------------------------------------------------------------------------------------------------
+        # Disable for Release
+        # ---------------------------------------------------------------------------------------------------
+        self.ReadRAMButton = wx.Button(panel, -1, label='Dump RAM', pos=(0, 0), size=(150, 50))
+        self.ReadRAMButton.SetFont(font16)
+        self.Bind(wx.EVT_BUTTON, self.on_ReadRAMButton, self.ReadRAMButton)
 
-
+        self.ReadEEPROMButton = wx.Button(panel, -1, label='Dump EEPROM', pos=(0, 50), size=(150, 50))
+        self.ReadEEPROMButton.SetFont(font16)
+        self.Bind(wx.EVT_BUTTON, self.on_ReadEEPROMButton, self.ReadEEPROMButton)
+        # ---------------------------------------------------------------------------------------------------
+        
         self.SettingsPageGotoButton = wx.Button(panel, -1, label='Settings', pos=(300, 350), size=(150, 50))
         self.SettingsPageGotoButton.SetFont(font16)
         self.Bind(wx.EVT_BUTTON, self.on_SettingsPageGotoButton, self.SettingsPageGotoButton)
@@ -1362,6 +1420,14 @@ class MainWindow(wx.Frame):
                 self.Update_Statusbar(str(BaseStationTitle), 1)
         self.OnTimer(wx.EVT_TIMER)
 
+    def on_ReadRAMButton(self,event):
+        global GlobalSerialPort
+        CapIO.DumpRAM(GlobalSerialPort)
+
+    def on_ReadEEPROMButton(self,event):
+        global GlobalSerialPort
+        CapIO.DumpEEPROM(GlobalSerialPort)
+
     def on_WritePageGotoButton(self, event):
         global GlobalDBLocation
         self.WritePanel.WriteFacilityTextCtrl.SetValue(self.SettingsPanel.SettingsFacilityTextCtrl.Value)
@@ -1422,11 +1488,11 @@ class MainWindow(wx.Frame):
                         NotRead = False  # success don't try again
 
                         print("Successfully read from cap.")
-                        print(" ")
+                        print("\n-------------------------")
+                        print("Start time: " + str(StartTime))
 
                         # open database file
                         ClientDB = ET.parse(os.path.join(GlobalDBLocation, 'PatientDB.XML'), ET.XMLParser())
-                        print("DB open.")
                         # find client
                         ClientElementList = ClientDB.getroot()
                         ClientName = XMLTagTextPrepare(RxInfoDict['Client'])
@@ -1453,8 +1519,8 @@ class MainWindow(wx.Frame):
                         # ONLY ADDS DATE AND DATA IF PATIENT IS NEW
                         DateString = datetime.datetime.now().strftime("Date-%Y-%m-%d-%H-%M-%S")
                         NewDateTimeElement = ET.SubElement(NewPatient, DateString)
-                        print("Date String: " + DateString)
-                        print(RxInfoDict)
+                        #print(RxInfoDict)
+
                         # Add Info
                         RxInfoDict['DosePattern'] = DosePatterns[RxInfoDict['DosePattern']]
                         NewDateTimeElement.attrib['Facility'] = RxInfoDict['Facility']
@@ -1462,17 +1528,24 @@ class MainWindow(wx.Frame):
                         NewDateTimeElement.attrib['Treatment'] = RxInfoDict['Treatment']
                         NewDateTimeElement.attrib['DosePattern'] = RxInfoDict['DosePattern']
                         NewDateTimeElement.attrib['DoseCount'] = RxInfoDict['DoseCount']
-                        print("DosePattern, Facility, Doctor, Treatment, DosePattern, DoseCount added")
+
+                        print('DosePattern: ' + RxInfoDict['DosePattern'])
+                        print('Facility: ' + RxInfoDict['Facility'])
+                        print('Doctor: ' + RxInfoDict['Doctor'])
+                        print('Treatment: ' + RxInfoDict['Treatment'])
+                        print('DosePattern: ' + RxInfoDict['DosePattern'])
+                        print('DoseCount: ' + RxInfoDict['DoseCount'])
 
                         # Add Data
-                        print("Time points: ")
+                        print("Time points number: " + str(len(TimePoints)))
                         print(TimePoints)
                         for Points in TimePoints:
                             DataSubList = CapIO.RxdStrParse(str(Points.strip()))
                             TimePointsText += (
                                 '{},{},{},{};'.format(DataSubList[3], DataSubList[2], DataSubList[1], DataSubList[0]))
                         NewDateTimeElement.text = TimePointsText
-                        print("Data Points Added")
+                        print("-------------------------\n")
+
 
                         # save file
                         XMLIndent(ClientElementList)
@@ -1596,13 +1669,12 @@ class MainWindow(wx.Frame):
                     CapTitle = 'No Cap'
                     CapStatusStr = ''
                 else:
-                    print("Cap Found. Parsing....")
+                    
                     CapTitle = PillCapTitleList[1] + ' ' + PillCapTitleList[2]
-                    print("Cap Title: " + CapTitle)
-
-                    print("Status: " + PillCapTitleList[3][:1])
                     CapStatusStr = CapStatus[PillCapTitleList[3][:1]]
-                    print("Cap Status: "  + CapStatusStr)
+
+                    
+                    print(CapTitle + ": " + CapStatusStr)
                     #TODO
                     BatteryLife = 100
                     #if BatteryLife > 0:

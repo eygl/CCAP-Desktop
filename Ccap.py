@@ -42,6 +42,7 @@ Version Date			Changes
 							Added more dose frequency options, modify output frequency units according to dose frequency selection
 							Added reporting dose length to report
 							Added buttons to reset battry timer, powerdown cap and enter demo mode
+<<<<<<< HEAD
 Above Developed by Jeffery Soohoo
 Email as of 2021:
 
@@ -49,6 +50,11 @@ Email as of 2021:
 
 Aboved Developed by Erick Gonzalez
 Email as of 2021: erickygonzalez@gmail.com
+=======
+0.70        01-07-21        Updated code base to Python 3.x. Developed on 3.9
+                            Fixed duplicated appends for serveral combo boxes.
+                            Added QR Generator for prescriptions. Used for CCAP Mobile App.
+>>>>>>> 916b1bdbb1e424c2a8137940bf7db2a8bee85892
 """
 SWVer = '0.60'
 

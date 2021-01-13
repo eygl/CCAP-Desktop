@@ -27,12 +27,12 @@ def RxdStrParse(RecievedString):
     return ReturnList
 
 def Ping(SPort):
-    print("Pinging for cap on: " + SPort)    
+    #print("Pinging for cap on: " + SPort)    
     COMPort = serial.Serial(SPort, CAP_BAUD_RATE, timeout=DEFAULT_SERIAL_TIMEOUT)
     COMPort.write(str.encode('T\r'))
 
     ResponseList = RxdStrParse(str(COMPort.readline()))
-    print("Response: " + str(ResponseList))
+    #print("Response: " + str(ResponseList))
 
 
     COMPort.close()

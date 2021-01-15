@@ -42,7 +42,6 @@ Version Date			Changes
 							Added more dose frequency options, modify output frequency units according to dose frequency selection
 							Added reporting dose length to report
 							Added buttons to reset battry timer, powerdown cap and enter demo mode
-<<<<<<< HEAD
 Above Developed by Jeffery Soohoo
 Email as of 2021:
 
@@ -548,13 +547,33 @@ class WriteWindow(wx.Frame):
                 DialogReturn = dlg.ShowModal()
 
     def on_GenerateQRCode(self):
-        StartTime = datetime.datetime.now().isoformat()
+        StartTime = self.Calendar.GetDate()
+                    
+        if self.WriteAMPMChoice.GetValue() == 'AM':
+            StartHours = self.WriteStartHours.GetValue()
+            if StartHours == 12:
+                StartHours = 0
+        else:
+            StartHours = self.WriteStartHours.GetValue() + 12
+            if StartHours == 24:
+                StartHours = 12
+        CapIO.WriteString(GlobalSerialPort, 'F:00:{:0>2}:{:0>2}:{:0>2}:{:0>2}:{:0>2}:{:0>2}\r'.format(
+            self.WriteStartMins.GetValue(), StartHours, StartTime.GetDay(), StartTime.GetWeekDay(),
+            StartTime.GetMonth() + 1, StartTime.GetYear() - 2000))
+
+        StartTime.SetHour(StartHours)
+        StartTime.SetMinute(self.WriteStartMins.GetValue())
+        
+        StartDateString = StartTime.FormatISOCombined()
+        print("Start: " + StartDateString)
+        nowDateString = datetime.datetime.now().isoformat()
+        print("Now: " + nowDateString) 
 
         self.rx = [{
             "treatment": self.WriteTreatmentChoice.GetValue(),
             "dosecount": str(self.WriteDoseCount.GetValue()),
             "dosefreq": DosePatternsText[self.WriteDoseChoice.GetValue()],
-            "startdate": StartTime,
+            "startdate": StartDateString,
             "patient" : self.WritePatientChoice.GetValue(),
             "client" : self.WriteClientChoice.GetValue(),
             "doctor" : self.WriteDrChoice.GetValue(),

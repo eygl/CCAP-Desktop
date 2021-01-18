@@ -181,7 +181,7 @@ class WriteWindow(wx.Frame):
     CapErased = False
 
     def __init__(self, parent):
-        wx.Frame.__init__(self, parent, title='Write Cap', size=(CalcFormLength(), CalcFormHeight() +150),
+        wx.Frame.__init__(self, parent, title='Write Cap', size=(CalcFormLength(), CalcFormHeight() +175),
                           style=wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.CLOSE_BOX | wx.MAXIMIZE_BOX))
 
         wx.Frame.CenterOnScreen(self)
@@ -264,17 +264,22 @@ class WriteWindow(wx.Frame):
         self.WriteRouteChoice.SetFont(font12)
         self.Bind(wx.EVT_COMBOBOX, self.on_RouteChange, self.WriteRouteChoice)
 
+        self.WriteNoteText = wx.StaticText(panel, -1, u'Note', pos=(15, 225), size=(120, 30))
+        self.WriteNoteText.SetFont(font16)
+        self.WriteNoteTextCtrl = wx.TextCtrl(panel, -1, '', pos=(150, 225), size=(175, -1))
+        self.WriteNoteTextCtrl.SetFont(font10)
+        self.WriteNoteTextCtrl.SetMaxLength(MAX_STRING_LENGTH)
 
-        self.WriteStartDateText = wx.StaticText(panel, -1, u'Start Date', pos=(15, 240), size=(120, 30))
+        self.WriteStartDateText = wx.StaticText(panel, -1, u'Start Date', pos=(15, 240 + 25), size=(120, 30))
         self.WriteStartDateText.SetFont(font16)
 
-        self.Calendar = wx.adv.CalendarCtrl(panel, 10, wx.DateTime.Now(),pos=(150,240))
+        self.Calendar = wx.adv.CalendarCtrl(panel, 10, wx.DateTime.Now(),pos=(150,240 + 25))
         #self.Calendar.SetDateRange(lowerdate=wx.DateTime.Now())
         self.Calendar.Bind(wx.adv.EVT_CALENDAR_SEL_CHANGED, self.OnDate)
 
-        self.WriteStartTimeText = wx.StaticText(panel, -1, u'Start Time', pos=(15, 250+150), size=(120, 30))
+        self.WriteStartTimeText = wx.StaticText(panel, -1, u'Start Time', pos=(15, 250+175), size=(120, 30))
         self.WriteStartTimeText.SetFont(font16)
-        self.WriteColonText = wx.StaticText(panel, -1, u':', pos=(200, 250+150), size=(15, 30))
+        self.WriteColonText = wx.StaticText(panel, -1, u':', pos=(200, 250+175), size=(15, 30))
         self.WriteColonText.SetFont(font16)
 
         now = datetime.datetime.now()
@@ -284,40 +289,40 @@ class WriteWindow(wx.Frame):
         else:
             InitHour = now.hour - 11
             AMOrPM = u'PM'
-        self.WriteStartHours = wx.SpinCtrl(panel, -1, pos=(150, 250+150), size=(50, 25), initial=InitHour,
+        self.WriteStartHours = wx.SpinCtrl(panel, -1, pos=(150, 250+175), size=(50, 25), initial=InitHour,
                                            value=str(InitHour), min=1, max=12)
         self.WriteStartHours.SetFont(font12)
-        self.WriteStartMins = wx.SpinCtrl(panel, -1, pos=(215, 250+150), size=(50, 25), initial=0, value='0', min=0, max=59)
+        self.WriteStartMins = wx.SpinCtrl(panel, -1, pos=(215, 250+175), size=(50, 25), initial=0, value='0', min=0, max=59)
         self.WriteStartMins.SetFont(font12)
 
-        self.WriteAMPMChoice = wx.ComboBox(panel, -1, AMOrPM, pos=(270, 250+150), size=(60, 25),
+        self.WriteAMPMChoice = wx.ComboBox(panel, -1, AMOrPM, pos=(270, 250+175), size=(60, 25),
                                            choices=[u'AM', u'PM'], style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.WriteAMPMChoice.SetFont(font12)
 
-        self.WriteBuzzerEnableCheckBox = wx.CheckBox(panel, -1, 'Enable Buzzer', (150, 280+150), size=(150, 30))
+        self.WriteBuzzerEnableCheckBox = wx.CheckBox(panel, -1, 'Enable Buzzer', (150, 280+175), size=(150, 30))
         self.WriteBuzzerEnableCheckBox.SetFont(font12)
 
-        self.WriteNewBatteryButton = wx.Button(panel, -1, label='New Battery', pos=(300, 300+150), size=(150, 50))
+        self.WriteNewBatteryButton = wx.Button(panel, -1, label='New Battery', pos=(300, 300+175), size=(150, 50))
         self.WriteNewBatteryButton.SetFont(font16)
         self.Bind(wx.EVT_BUTTON, self.on_WriteNewBatteryButton, self.WriteNewBatteryButton)
 
-        self.WriteDemoButton = wx.Button(panel, -1, label='Demo Mode', pos=(450, 300+150), size=(150, 50))
+        self.WriteDemoButton = wx.Button(panel, -1, label='Demo Mode', pos=(450, 300+175), size=(150, 50))
         self.WriteDemoButton.SetFont(font16)
         self.Bind(wx.EVT_BUTTON, self.on_WriteDemoButton, self.WriteDemoButton)
 
-        self.WriteWriteButton = wx.Button(panel, -1, label='Write', pos=(0, 350+150), size=(150, 50))
+        self.WriteWriteButton = wx.Button(panel, -1, label='Write', pos=(0, 350+175), size=(150, 50))
         self.WriteWriteButton.SetFont(font16)
         self.Bind(wx.EVT_BUTTON, self.on_WriteWriteButton, self.WriteWriteButton)
 
-        self.WriteEraseButton = wx.Button(panel, -1, label='Erase', pos=(150, 350+150), size=(150, 50))
+        self.WriteEraseButton = wx.Button(panel, -1, label='Erase', pos=(150, 350+175), size=(150, 50))
         self.WriteEraseButton.SetFont(font16)
         self.Bind(wx.EVT_BUTTON, self.on_WriteEraseButton, self.WriteEraseButton)
 
-        self.WriteQRCodeButton = wx.Button(panel, -1, label='QR Code', pos=(300, 350+150), size=(150, 50))
+        self.WriteQRCodeButton = wx.Button(panel, -1, label='QR Code', pos=(300, 350+175), size=(150, 50))
         self.WriteQRCodeButton.SetFont(font16)
         self.Bind(wx.EVT_BUTTON, self.on_WriteQRCodeButton, self.WriteQRCodeButton)
 
-        self.WriteBackButton = wx.Button(panel, -1, label='Back', pos=(450, 350+150), size=(150, 50))
+        self.WriteBackButton = wx.Button(panel, -1, label='Back', pos=(450, 350+175), size=(150, 50))
         self.WriteBackButton.SetFont(font16)
         self.Bind(wx.EVT_BUTTON, self.on_WriteBackButton, self.WriteBackButton)
 
@@ -581,7 +586,7 @@ class WriteWindow(wx.Frame):
             "route" :  str(self.WriteRouteChoice.GetValue()).lower(),
             "medication" : self.WriteTreatmentChoice.GetValue(),
             "id": int(round(time.time() * 1000)),
-            "note":"N/A",
+            "note":str(self.WriteNoteTextCtrl.GetValue()),
             "active":True,
         }]
 
@@ -606,6 +611,7 @@ class WriteWindow(wx.Frame):
         draw = ImageDraw.Draw(imageCanvas)             
         boldFont = ImageFont.truetype('Roboto-Bold.ttf',size=18)
         regularFont = ImageFont.truetype('Roboto-Regular.ttf',size=14)
+        regularBoldFont = ImageFont.truetype('Roboto-Bold.ttf',size=14)
         color = 'rgb(0, 0, 0)' 
 
         now = datetime.datetime.now()
@@ -646,6 +652,9 @@ class WriteWindow(wx.Frame):
         draw.text((20,height + 60), treatmentString.upper(), fill=color,font=regularFont,align='left')
         draw.text((20,height + 100 + lineHeight * numberOfNewlines), self.rx[0]['medication'], fill=color, font=boldFont,align='left') 
         draw.text((20,height + 120 + lineHeight * numberOfNewlines), "QTY: " + self.rx[0]['dosecount'], fill=color, font= regularFont, align='left')
+        
+        if not self.rx[0]['note'] == '':
+            draw.text((20,height + 140 + lineHeight * numberOfNewlines), "NOTE: " + self.rx[0]['note'].upper(), fill=color, font= regularBoldFont, align='left')
 
 
 
@@ -1196,14 +1205,14 @@ class SettingsWindow(wx.Frame):
         self.SettingsFacilityText = wx.StaticText(panel, -1, u'Facility', pos=(15, 25), size=(120, 30))
         self.SettingsFacilityText.SetFont(font16)
 
-        self.SettingsFacilityTextCtrl = wx.TextCtrl(panel, -1, '', pos=(150, 25), size=(175, -1))
+        self.SettingsFacilityTextCtrl = wx.TextCtrl(panel, -1, '', pos=(150, 25), size=(300, -1))
         self.SettingsFacilityTextCtrl.SetFont(font12)
         self.SettingsFacilityTextCtrl.SetMaxLength(MAX_STRING_LENGTH)
 
         self.SettingsCommandText = wx.StaticText(panel, -1, u'Configure Commands', pos=(15, 300), size=(120, 30))
         self.SettingsCommandText.SetFont(font16)
 
-        self.SettingsCommandTextCtrl = wx.TextCtrl(panel, -1, '', pos=(225, 300), size=(175, -1),
+        self.SettingsCommandTextCtrl = wx.TextCtrl(panel, -1, '', pos=(225, 300), size=(300, -1),
                                                    style=wx.TE_PROCESS_ENTER)
         self.SettingsCommandTextCtrl.SetFont(font12)
         self.SettingsCommandTextCtrl.SetMaxLength(MAX_STRING_LENGTH)
@@ -1212,13 +1221,13 @@ class SettingsWindow(wx.Frame):
         self.SettingsDrText = wx.StaticText(panel, -1, u'Doctors', pos=(15, 75), size=(120, 30))
         self.SettingsDrText.SetFont(font16)
 
-        self.SettingsDrList = wx.TextCtrl(parent=panel, id=-1, pos=(150, 75), size=(175, 100), style=wx.TE_MULTILINE)
+        self.SettingsDrList = wx.TextCtrl(parent=panel, id=-1, pos=(150, 65), size=(300, 100), style=wx.TE_MULTILINE)
         self.SettingsDrList.SetFont(font12)
 
         self.SettingsMedText = wx.StaticText(panel, -1, u'Treatments', pos=(15, 200), size=(120, 30))
         self.SettingsMedText.SetFont(font16)
 
-        self.SettingsMedList = wx.TextCtrl(panel, -1, pos=(150, 200), size=(175, 100), style=wx.TE_MULTILINE)
+        self.SettingsMedList = wx.TextCtrl(panel, -1, pos=(150, 180), size=(300, 100), style=wx.TE_MULTILINE)
         self.SettingsMedList.SetFont(font12)
 
         self.SettingsBackButton = wx.Button(panel, -1, label='Back', pos=(450, 350), size=(150, 50))

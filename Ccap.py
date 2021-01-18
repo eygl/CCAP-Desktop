@@ -99,7 +99,7 @@ def SaveConfigFile(ConfigList):
         parser.set('Settings', Setting, ConfigList[Setting])
 
     # Write configuration file to 'Ccap.cfg'
-    with open('Ccap.cfg', 'wb') as configfile:
+    with open('Ccap.cfg', 'w') as configfile:
         parser.write(configfile)
 
 
@@ -642,10 +642,10 @@ class WriteWindow(wx.Frame):
                 offset = spaceIndexList[i-1]
                 numberOfNewlines += 1
 
-                
+        lineHeight = 14
         draw.text((20,height + 60), treatmentString.upper(), fill=color,font=regularFont,align='left')
-        draw.text((20,height + 100 + 14 * numberOfNewlines), self.rx[0]['medication'], fill=color, font=boldFont,align='left') 
-        draw.text((20,height + 120 + 14 * numberOfNewlines), "QTY: " + self.rx[0]['dosecount'], fill=color, font= regularFont, align='left')
+        draw.text((20,height + 100 + lineHeight * numberOfNewlines), self.rx[0]['medication'], fill=color, font=boldFont,align='left') 
+        draw.text((20,height + 120 + lineHeight * numberOfNewlines), "QTY: " + self.rx[0]['dosecount'], fill=color, font= regularFont, align='left')
 
 
 
@@ -674,10 +674,10 @@ class WriteWindow(wx.Frame):
             CapIO.WriteString(GlobalSerialPort, 'AR/r')
 
     def on_WriteBackButton(self, event):
-        # SettingsDict = {}
-        # SettingsDict['lasttreatment'] = self.WriteTreatmentChoice.GetValue()
-        # SettingsDict['lastdoctor'] = self.WriteDrChoice.GetValue()
-        # SaveConfigFile(SettingsDict)
+        SettingsDict = {}
+        SettingsDict['lasttreatment'] = self.WriteTreatmentChoice.GetValue()
+        SettingsDict['lastdoctor'] = self.WriteDrChoice.GetValue()
+        SaveConfigFile(SettingsDict)
         self.WriteDoseCount.SetValue(30)
         # self.Calendar.SetRange(wx.DateTime_Now() - wx.DateSpan(days=1), wx.DateTime_Now() + wx.DateSpan(days=90))
         now = datetime.datetime.now()
@@ -892,9 +892,9 @@ class ReportsWindow(wx.Frame):
         # Reports.GenerateReport(self.ReportDestination.GetValue(), self.ReportFormatChoice.GetValue(), InfoDict, Date.text)
 
     def on_ReportsBackButton(self, event):
-        # SettingsDict = {}
-        # SettingsDict['reportformat'] = self.ReportFormatChoice.GetValue()
-        # SaveConfigFile(SettingsDict)
+        SettingsDict = {}
+        SettingsDict['reportformat'] = self.ReportFormatChoice.GetValue()
+        SaveConfigFile(SettingsDict)
         self.ReportClientChoice.SetValue('')
         self.ReportPatientChoice.SetValue('')
         self.ReportDateChoice.SetValue('')
@@ -1287,12 +1287,12 @@ class SettingsWindow(wx.Frame):
         DirDialog.Destroy()
 
     def on_SettingsBackButton(self, event):
-        # SettingsDict = {}
-        # SettingsDict['Facility'] = self.SettingsFacilityTextCtrl.Value
-        # SettingsDict['Treatments'] = self.SettingsMedList.GetValue()
-        # SettingsDict['Doctors'] = self.SettingsDrList.GetValue()
-        # SettingsDict['DatabaseLocation'] = self.SettingsDatabaseLocation.GetValue()
-        # SaveConfigFile(SettingsDict)
+        SettingsDict = {}
+        SettingsDict['Facility'] = self.SettingsFacilityTextCtrl.Value
+        SettingsDict['Treatments'] = self.SettingsMedList.GetValue()
+        SettingsDict['Doctors'] = self.SettingsDrList.GetValue()
+        SettingsDict['DatabaseLocation'] = self.SettingsDatabaseLocation.GetValue()
+        SaveConfigFile(SettingsDict)
         self.SettingsCommandTextCtrl.SetValue('')
         self.Hide()
         frame.Show()

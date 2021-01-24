@@ -275,7 +275,7 @@ class WriteWindow(wx.Frame):
 
         self.Calendar = wx.adv.CalendarCtrl(panel, 10, wx.DateTime.Now(),pos=(150,240 + 25))
         #self.Calendar.SetDateRange(lowerdate=wx.DateTime.Now())
-        self.Calendar.Bind(wx.adv.EVT_CALENDAR_SEL_CHANGED, self.OnDate)
+        self.Calendar.Bind(wx.adv.EVT_CALENDAR_SEL_CHANGED, self.on_Date)
 
         self.WriteStartTimeText = wx.StaticText(panel, -1, u'Start Time', pos=(15, 250+175), size=(120, 30))
         self.WriteStartTimeText.SetFont(font16)
@@ -326,11 +326,15 @@ class WriteWindow(wx.Frame):
         self.WriteBackButton.SetFont(font16)
         self.Bind(wx.EVT_BUTTON, self.on_WriteBackButton, self.WriteBackButton)
 
+    def on_CheckConfigLocation(self):
+
+        pass
+
     def on_RouteChange(self,event):
         if self.WriteRouteChoice.GetStringSelection() == 'Mouth':
             print(self.WriteRouteChoice.GetStringSelection())
 
-    def OnDate(self,event):
+    def on_Date(self,event):
         print(self.Calendar.GetDate())
         print(type(self.Calendar.GetDate()))
 
@@ -1391,8 +1395,14 @@ class MainWindow(wx.Frame):
         # end of GUI initialization
 
         # load settings
+        currentDirectory = os.path.abspath(os.getcwd())
+        print(currentDirectory)
         config = configparser.ConfigParser(
-            defaults={'facility': '', 'treatments': '', 'doctors': '', 'reportdestination': '', 'reportformat': 'Text'})
+            defaults={'facility': '', 'databaselocation': currentDirectory, 
+                      'lastdoctor': '', 'treatments': '', 
+                      'lasttreatment': '', 'doctors': '', 
+                      'reportdestination': '', 'reportformat': 'Text',
+                      'batterylife': '365'})
         if not (os.path.isfile('Ccap.cfg')):
             file = open("Ccap.cfg", "w")
             file.write("[Settings]\n")
@@ -1409,8 +1419,8 @@ class MainWindow(wx.Frame):
 
         self.SettingsPanel.SettingsFacilityTextCtrl.SetValue(config.get('Settings', 'facility'))
         self.WritePanel.WriteFacilityTextCtrl.SetValue(config.get('Settings', 'facility'))
-        self.SettingsPanel.SettingsDatabaseLocation.SetValue(config.get('Settings', 'DatabaseLocation'))
-        GlobalDBLocation = config.get('Settings', 'DatabaseLocation')
+        self.SettingsPanel.SettingsDatabaseLocation.SetValue(config.get('Settings', 'databaselocation'))
+        GlobalDBLocation = config.get('Settings', 'databaselocation')
 
         self.WritePanel.WriteDrChoice.SetValue(config.get('Settings', 'lastdoctor'))
         self.WritePanel.WriteTreatmentChoice.SetValue(config.get('Settings', 'lasttreatment'))
